@@ -4,7 +4,7 @@ import { projects } from "../../lib/data/projects";
 import { Github, ExternalLink } from "lucide-react";
 
 const Projects: React.FC = () => {
-  const [filter, setFilter] = useState<"all" | "featured">("all");
+  const [filter] = useState<"all" | "featured">("all");
 
   const filteredProjects = filter === "all" ? projects : projects.filter((project) => project.featured);
 
@@ -19,7 +19,7 @@ const Projects: React.FC = () => {
           transition={{ duration: 0.5 }}>
           My Projects
         </motion.h2>
-
+        {/* 
         <div className="flex justify-center mb-10">
           <div className="inline-flex rounded-md shadow-sm" role="group">
             <button
@@ -43,7 +43,7 @@ const Projects: React.FC = () => {
               Featured
             </button>
           </div>
-        </div>
+        </div> */}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
           {filteredProjects.map((project) => (
@@ -60,9 +60,9 @@ const Projects: React.FC = () => {
                   alt={project.title}
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
-                {project.featured && (
+                {/* {project.featured && (
                   <span className="absolute top-4 right-4 bg-primary-600 text-white text-xs px-2 py-1 rounded-md">Featured</span>
-                )}
+                )} */}
               </div>
 
               <div className="p-6">

@@ -17,8 +17,10 @@ const Home: React.FC = () => {
             </h1>
             <h2 className="text-2xl sm:text-3xl font-medium mb-6 text-dark-700 dark:text-dark-200">Front-end Developer</h2>
             <p className="text-lg text-dark-600 dark:text-dark-300 mb-8 max-w-2xl mx-auto lg:mx-0">
-              I craft responsive websites where technology meets creativity. Specialized in building exceptional digital experiences with
-              modern front-end technologies.
+              Recognized for rapidly dissecting multifaceted technical challenges and architecting scalable, user-centric solutions across
+              debugging, feature development, and cross-platform performance optimization. Combines strategic problem-solving with a
+              meticulous focus on code quality and system efficiency to drive measurable improvements in user engagement, scalability, and
+              business outcomes.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
@@ -65,7 +67,8 @@ const Home: React.FC = () => {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5, delay: 0.2 }}
             className="lg:w-1/2 flex justify-center">
-            <div className="relative w-64 h-64 sm:w-80 sm:h-80 rounded-full overflow-hidden  shadow-xl">
+            {/* <div className="relative w-64 h-64 sm:w-80 sm:h-80 rounded-full overflow-hidden  shadow-xl"> */}
+            <div className="relative w-64 h-64 sm:w-80 sm:h-80 rounded-full overflow-hidden">
               {/* <img
                 src="https://images.pexels.com/photos/2379005/pexels-photo-2379005.jpeg?auto=compress&cs=tinysrgb&w=800"
                 alt="Samer Godaa"
