@@ -1,5 +1,16 @@
 export const projects: Project[] = [
   {
+    id: 11,
+    title: "Online Exam Next",
+    description: `Next.js "app" router, React Server Components, server actions, authentication with NextAuth (google, X, facebook) authentication, ,
+Tailwind CSS, Clean Architecture`,
+    image: "./../project/online-exam.png",
+    tags: ["Next.js", "React", "Tailwind CSS", "authentication"],
+    demoUrl: "https://online-exam-ts.vercel.app/",
+    githubUrl: "",
+    featured: true,
+  },
+  {
     id: 1,
     title: "Wild Oasis Next",
     description: `Next.js "app" router, React Server Components, server actions, authentication with NextAuth ,
