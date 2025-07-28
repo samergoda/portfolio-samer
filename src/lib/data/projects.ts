@@ -1,8 +1,18 @@
 export const projects: Project[] = [
   {
+    id: 19,
+    title: "Flower Shop Next",
+    description: `Next.js "app" router, React Server Components, server actions, authentication and authorization, dashboard, shadcn/ui, i18 translation, Tailwind CSS, Clean Architecture`,
+    image: "./../project/flower-app.png",
+    tags: ["Next.js", "Tailwind CSS", "authentication", "authorization", "translation", "i18n"],
+    demoUrl: "https://elevate-flower-app.vercel.app/en",
+    githubUrl: "",
+    featured: true,
+  },
+  {
     id: 11,
     title: "Online Exam Next",
-    description: `Next.js "app" router, React Server Components, server actions, authentication with NextAuth (google, X, facebook) authentication, ,
+    description: `Next.js "app" router, React Server Components, server actions, authentication with NextAuth (google, X, facebook) authentication,
 Tailwind CSS, Clean Architecture`,
     image: "./../project/online-exam.png",
     tags: ["Next.js", "React", "Tailwind CSS", "authentication"],
