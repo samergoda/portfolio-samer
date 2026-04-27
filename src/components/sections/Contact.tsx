@@ -10,20 +10,59 @@ const Contact: React.FC = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) => {
     setFormState({
       ...formState,
       [e.target.name]: e.target.value,
     });
+    setSubmitError(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setSubmitError(null);
 
-    // Simulate form submission
-    setTimeout(() => {
+    // Client-side validation
+    const trimmedName = formState.name.trim();
+    const trimmedEmail = formState.email.trim();
+    const trimmedMessage = formState.message.trim();
+
+    if (!trimmedName || !trimmedEmail || !trimmedMessage) {
+      setIsSubmitting(false);
+      setSubmitError("Please fill in all fields");
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      setIsSubmitting(false);
+      setSubmitError("Please enter a valid email address");
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/send-email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: trimmedName,
+          email: trimmedEmail,
+          message: trimmedMessage,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to send email");
+      }
+
       setIsSubmitting(false);
       setSubmitSuccess(true);
       setFormState({ name: "", email: "", message: "" });
@@ -32,7 +71,12 @@ const Contact: React.FC = () => {
       setTimeout(() => {
         setSubmitSuccess(false);
       }, 5000);
-    }, 1500);
+    } catch (error) {
+      setIsSubmitting(false);
+      setSubmitError(
+        error instanceof Error ? error.message : "An error occurred",
+      );
+    }
   };
 
   return (
@@ -43,7 +87,8 @@ const Contact: React.FC = () => {
           initial={{ opacity: 0, y: -20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.5 }}>
+          transition={{ duration: 0.5 }}
+        >
           Contact Me
         </motion.h2>
 
@@ -52,10 +97,14 @@ const Contact: React.FC = () => {
             initial={{ opacity: 0, x: -30 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.5 }}>
-            <h3 className="text-2xl font-semibold mb-6 text-dark-900 dark:text-dark-50">Get in Touch</h3>
+            transition={{ duration: 0.5 }}
+          >
+            <h3 className="text-2xl font-semibold mb-6 text-dark-900 dark:text-dark-50">
+              Get in Touch
+            </h3>
             <p className="text-dark-600 dark:text-dark-300 mb-8">
-              I'm always open to discussing new projects, creative ideas or opportunities to be part of your vision. Feel free to contact me
+              I'm always open to discussing new projects, creative ideas or
+              opportunities to be part of your vision. Feel free to contact me
               using the form or through my contact information.
             </p>
 
@@ -65,10 +114,13 @@ const Contact: React.FC = () => {
                   <Mail size={20} />
                 </div>
                 <div>
-                  <h4 className="text-lg font-medium text-dark-900 dark:text-dark-100">Email</h4>
+                  <h4 className="text-lg font-medium text-dark-900 dark:text-dark-100">
+                    Email
+                  </h4>
                   <a
                     href="mailto:contact@samergoda66@yahoo.com"
-                    className="text-dark-600 dark:text-dark-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
+                    className="text-dark-600 dark:text-dark-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                  >
                     samergoda66@yahoo.com
                   </a>
                 </div>
@@ -79,8 +131,12 @@ const Contact: React.FC = () => {
                   <MapPin size={20} />
                 </div>
                 <div>
-                  <h4 className="text-lg font-medium text-dark-900 dark:text-dark-100">Location</h4>
-                  <p className="text-dark-600 dark:text-dark-400">Alexandria, Egypt</p>
+                  <h4 className="text-lg font-medium text-dark-900 dark:text-dark-100">
+                    Location
+                  </h4>
+                  <p className="text-dark-600 dark:text-dark-400">
+                    Alexandria, Egypt
+                  </p>
                 </div>
               </div>
 
@@ -89,8 +145,12 @@ const Contact: React.FC = () => {
                   <Phone size={20} />
                 </div>
                 <div>
-                  <h4 className="text-lg font-medium text-dark-900 dark:text-dark-100">Phone</h4>
-                  <p className="text-dark-600 dark:text-dark-400">+201147196733</p>
+                  <h4 className="text-lg font-medium text-dark-900 dark:text-dark-100">
+                    Phone
+                  </h4>
+                  <p className="text-dark-600 dark:text-dark-400">
+                    +201147196733
+                  </p>
                 </div>
               </div>
             </div>
@@ -100,10 +160,14 @@ const Contact: React.FC = () => {
             initial={{ opacity: 0, x: 30 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.5 }}>
+            transition={{ duration: 0.5 }}
+          >
             <form onSubmit={handleSubmit} className="card p-6">
               <div className="mb-4">
-                <label htmlFor="name" className="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1">
+                <label
+                  htmlFor="name"
+                  className="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1"
+                >
                   Your Name
                 </label>
                 <input
@@ -118,7 +182,10 @@ const Contact: React.FC = () => {
               </div>
 
               <div className="mb-4">
-                <label htmlFor="email" className="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1">
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1"
+                >
                   Your Email
                 </label>
                 <input
@@ -133,7 +200,10 @@ const Contact: React.FC = () => {
               </div>
 
               <div className="mb-6">
-                <label htmlFor="message" className="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1">
+                <label
+                  htmlFor="message"
+                  className="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1"
+                >
                   Your Message
                 </label>
                 <textarea
@@ -143,13 +213,15 @@ const Contact: React.FC = () => {
                   onChange={handleChange}
                   rows={5}
                   className="w-full px-4 py-2 rounded-lg border border-dark-300 dark:border-dark-700 bg-white dark:bg-dark-800 text-dark-800 dark:text-dark-200 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-600"
-                  required></textarea>
+                  required
+                ></textarea>
               </div>
 
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full bg-primary-600 hover:bg-primary-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center">
+                className="w-full bg-primary-600 hover:bg-primary-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center"
+              >
                 {isSubmitting ? (
                   <>
                     <Loader size={20} className="animate-spin mr-2" />
@@ -166,6 +238,12 @@ const Contact: React.FC = () => {
               {submitSuccess && (
                 <div className="mt-4 p-3 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-lg text-center">
                   Your message has been sent successfully!
+                </div>
+              )}
+
+              {submitError && (
+                <div className="mt-4 p-3 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-lg text-center">
+                  {submitError}
                 </div>
               )}
             </form>
