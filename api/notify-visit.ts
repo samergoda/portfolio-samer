@@ -3,19 +3,9 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// In-memory store for IP rate limiting (resets when serverless function cold starts)
-// For production, use a database or KV store like Vercel KV / Upstash Redis
-const visitedIPs = new Map<string, number>();
-
-// Clean up old entries every hour equivalent (on each request)
-function cleanupOldEntries() {
-  const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
-  for (const [ip, timestamp] of visitedIPs.entries()) {
-    if (timestamp < oneDayAgo) {
-      visitedIPs.delete(ip);
-    }
-  }
-}
+// In-memory store for IP rate limiting per day
+// Key format: "IP:YYYY-MM-DD"
+const visitedIPs = new Map<string, boolean>();
 
 function escapeHtml(str: string): string {
   return str
@@ -38,19 +28,20 @@ export default async (req: VercelRequest, res: VercelResponse) => {
       req.headers["x-real-ip"]?.toString() ||
       "unknown";
 
-    // Clean up expired entries
-    cleanupOldEntries();
+    // Get current date in Cairo timezone (YYYY-MM-DD format)
+    const today = new Date().toLocaleDateString("en-CA", {
+      timeZone: "Africa/Cairo",
+    });
+
+    // Create unique key for this IP on this specific date
+    const ipDateKey = `${ip}:${today}`;
 
     // Check if this IP already triggered a notification today
-    const lastVisit = visitedIPs.get(ip);
-    if (lastVisit && Date.now() - lastVisit < 24 * 60 * 60 * 1000) {
+    if (visitedIPs.has(ipDateKey)) {
       return res
         .status(200)
         .json({ success: true, skipped: true, reason: "Already notified today" });
     }
-
-    // Mark this IP as visited
-    visitedIPs.set(ip, Date.now());
 
     const userAgent = escapeHtml(
       req.headers["user-agent"]?.toString() || "unknown"
@@ -96,10 +87,11 @@ export default async (req: VercelRequest, res: VercelResponse) => {
 
     if (error) {
       console.error("Resend API error:", error);
-      // Remove IP from map so it retries next time
-      visitedIPs.delete(ip);
       return res.status(500).json({ error: "Failed to send notification" });
     }
+
+    // Mark this IP as visited for today
+    visitedIPs.set(ipDateKey, true);
 
     return res.status(200).json({ success: true, id: data?.id });
   } catch (error) {
