@@ -13,6 +13,15 @@ function App() {
     document.title = "Samer Godaa | Front-end Developer";
   }, []);
 
+  // Notify about new visitor (one email per IP per day) — production only
+  useEffect(() => {
+    if (import.meta.env.PROD) {
+      fetch("/api/notify-visit", { method: "POST" }).catch(() => {
+        // Silently fail — this is just a notification
+      });
+    }
+  }, []);
+
   return (
     <div className="min-h-screen bg-white dark:bg-dark-950 text-dark-800 dark:text-dark-100">
       <Header />
