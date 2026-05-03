@@ -1,7 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-
-// In-memory store for interactions (in production, use a database)
-const interactionsStore = new Map<string, any[]>();
+import { kv } from "@vercel/kv";
 
 export default async (req: VercelRequest, res: VercelResponse) => {
   if (req.method !== "POST") {
@@ -28,12 +26,12 @@ export default async (req: VercelRequest, res: VercelResponse) => {
       timestamp: timestamp || new Date().toISOString(),
     };
 
-    // Store interaction
-    const key = `${ip}-${new Date().toISOString().split("T")[0]}`;
-    if (!interactionsStore.has(key)) {
-      interactionsStore.set(key, []);
-    }
-    interactionsStore.get(key)?.push(interaction);
+    // Store interaction in KV
+    const interactionKey = `interaction:${Date.now()}:${ip}`;
+    await kv.set(interactionKey, interaction);
+
+    // Set expiry for interaction data (30 days)
+    await kv.expire(interactionKey, 60 * 60 * 24 * 30);
 
     return res.status(200).json({ success: true });
   } catch (error) {

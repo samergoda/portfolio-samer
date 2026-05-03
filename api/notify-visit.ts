@@ -1,15 +1,9 @@
 import { Resend } from "resend";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { UAParser } from "ua-parser-js";
+import { kv } from "@vercel/kv";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-
-// In-memory store for IP rate limiting per day
-// Key format: "IP:YYYY-MM-DD"
-const visitedIPs = new Map<string, boolean>();
-
-// In-memory store for visitor analytics
-const analyticsStore = new Map<string, any>();
 
 function escapeHtml(str: string): string {
   return str
@@ -62,10 +56,11 @@ export default async (req: VercelRequest, res: VercelResponse) => {
     });
 
     // Create unique key for this IP on this specific date
-    const ipDateKey = `${ip}:${today}`;
+    const ipDateKey = `visited:${ip}:${today}`;
 
     // Check if this IP already triggered a notification today
-    if (visitedIPs.has(ipDateKey)) {
+    const alreadyVisited = await kv.get(ipDateKey);
+    if (alreadyVisited) {
       return res
         .status(200)
         .json({ success: true, skipped: true, reason: "Already notified today" });
@@ -88,7 +83,7 @@ export default async (req: VercelRequest, res: VercelResponse) => {
       timeStyle: "medium",
     });
 
-    // Store analytics data
+    // Store analytics data in KV
     const analyticsEntry = {
       ip,
       timestamp: new Date().toISOString(),
@@ -103,7 +98,12 @@ export default async (req: VercelRequest, res: VercelResponse) => {
       interactions: interactions || [],
     };
 
-    analyticsStore.set(`${ip}-${Date.now()}`, analyticsEntry);
+    // Store visitor data with timestamp in key for uniqueness
+    const visitorKey = `visitor:${Date.now()}:${ip}`;
+    await kv.set(visitorKey, analyticsEntry);
+
+    // Set expiry for visitor data (30 days)
+    await kv.expire(visitorKey, 60 * 60 * 24 * 30);
 
     // Build detailed email
     const browserInfo = `${uaResult.browser.name || "Unknown"} ${uaResult.browser.version || ""}`;
@@ -196,8 +196,15 @@ export default async (req: VercelRequest, res: VercelResponse) => {
       return res.status(500).json({ error: "Failed to send notification" });
     }
 
-    // Mark this IP as visited for today
-    visitedIPs.set(ipDateKey, true);
+    // Mark this IP as visited for today (expires at midnight Cairo time)
+    await kv.set(ipDateKey, true);
+    // Calculate seconds until midnight Cairo time
+    const now = new Date();
+    const cairoTime = new Date(now.toLocaleString("en-US", { timeZone: "Africa/Cairo" }));
+    const midnight = new Date(cairoTime);
+    midnight.setHours(24, 0, 0, 0);
+    const secondsUntilMidnight = Math.floor((midnight.getTime() - cairoTime.getTime()) / 1000);
+    await kv.expire(ipDateKey, secondsUntilMidnight);
 
     return res.status(200).json({ success: true, id: data?.id });
   } catch (error) {
