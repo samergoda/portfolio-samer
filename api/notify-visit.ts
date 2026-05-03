@@ -1,6 +1,7 @@
 import { Resend } from "resend";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import UAParser from "ua-parser-js";
+import { UAParser } from "ua-parser-js";
+
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 // In-memory store for IP rate limiting per day
@@ -38,6 +39,12 @@ export default async (req: VercelRequest, res: VercelResponse) => {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
+  // Check if RESEND_API_KEY is configured
+  if (!process.env.RESEND_API_KEY) {
+    console.error("RESEND_API_KEY is not configured");
+    return res.status(500).json({ error: "Email service not configured" });
+  }
+
   try {
     // Get visitor IP
     const ip =
@@ -66,7 +73,7 @@ export default async (req: VercelRequest, res: VercelResponse) => {
 
     // Parse user agent
     const userAgentString = req.headers["user-agent"]?.toString() || "unknown";
-    const parser = new (UAParser as any)(userAgentString);
+    const parser = new UAParser(userAgentString);
     const uaResult = parser.getResult();
 
 
