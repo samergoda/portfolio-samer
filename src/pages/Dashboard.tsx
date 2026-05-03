@@ -197,6 +197,7 @@ const Dashboard: React.FC = () => {
                 <tr className="border-b border-dark-200 dark:border-dark-700">
                   <th className="text-left py-3 px-4 text-dark-700 dark:text-dark-200">Time</th>
                   <th className="text-left py-3 px-4 text-dark-700 dark:text-dark-200">Location</th>
+                  <th className="text-left py-3 px-4 text-dark-700 dark:text-dark-200">Ip address</th>
                   <th className="text-left py-3 px-4 text-dark-700 dark:text-dark-200">Browser</th>
                   <th className="text-left py-3 px-4 text-dark-700 dark:text-dark-200">Device</th>
                   <th className="text-left py-3 px-4 text-dark-700 dark:text-dark-200">Screen</th>
@@ -210,6 +211,9 @@ const Dashboard: React.FC = () => {
                     </td>
                     <td className="py-3 px-4 text-dark-600 dark:text-dark-300">
                       {visitor.geo ? `${visitor.geo.city}, ${visitor.geo.country}` : "Unknown"}
+                    </td>
+                    <td className="py-3 px-4 text-dark-600 dark:text-dark-300">
+                     {visitor?.ip || 'Unknown'}
                     </td>
                     <td className="py-3 px-4 text-dark-600 dark:text-dark-300">
                       {visitor.parsedUA.browser.name} {visitor.parsedUA.browser.version}
