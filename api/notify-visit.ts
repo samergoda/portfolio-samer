@@ -1,9 +1,23 @@
 import { Resend } from "resend";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { UAParser } from "ua-parser-js";
-import { kv } from "@vercel/kv";
+import Redis from "ioredis";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
+
+// Create Redis client lazily
+let redis: Redis | null = null;
+
+function getRedisClient() {
+  if (!redis && process.env.REDIS_URL) {
+    redis = new Redis(process.env.REDIS_URL, {
+      maxRetriesPerRequest: 3,
+      enableOfflineQueue: false,
+      connectTimeout: 10000,
+    });
+  }
+  return redis;
+}
 
 function escapeHtml(str: string): string {
   return str
@@ -39,7 +53,21 @@ export default async (req: VercelRequest, res: VercelResponse) => {
     return res.status(500).json({ error: "Email service not configured" });
   }
 
+  // Check if REDIS_URL is configured
+  if (!process.env.REDIS_URL) {
+    console.error("REDIS_URL is not configured");
+    return res.status(500).json({
+      error: "Database not configured",
+      details: "REDIS_URL environment variable is missing"
+    });
+  }
+
   try {
+    const redisClient = getRedisClient();
+    if (!redisClient) {
+      throw new Error("Failed to create Redis client");
+    }
+
     // Get visitor IP
     const ip =
       req.headers["x-forwarded-for"]?.toString().split(",")[0]?.trim() ||
@@ -59,7 +87,7 @@ export default async (req: VercelRequest, res: VercelResponse) => {
     const ipDateKey = `visited:${ip}:${today}`;
 
     // Check if this IP already triggered a notification today
-    const alreadyVisited = await kv.get(ipDateKey);
+    const alreadyVisited = await redisClient.get(ipDateKey);
     if (alreadyVisited) {
       return res
         .status(200)
@@ -70,7 +98,6 @@ export default async (req: VercelRequest, res: VercelResponse) => {
     const userAgentString = req.headers["user-agent"]?.toString() || "unknown";
     const parser = new UAParser(userAgentString);
     const uaResult = parser.getResult();
-
 
     // Get geolocation data
     const geoData = await getGeoLocation(ip);
@@ -83,7 +110,7 @@ export default async (req: VercelRequest, res: VercelResponse) => {
       timeStyle: "medium",
     });
 
-    // Store analytics data in KV
+    // Store analytics data in Redis
     const analyticsEntry = {
       ip,
       timestamp: new Date().toISOString(),
@@ -100,10 +127,10 @@ export default async (req: VercelRequest, res: VercelResponse) => {
 
     // Store visitor data with timestamp in key for uniqueness
     const visitorKey = `visitor:${Date.now()}:${ip}`;
-    await kv.set(visitorKey, analyticsEntry);
+    await redisClient.set(visitorKey, JSON.stringify(analyticsEntry));
 
     // Set expiry for visitor data (30 days)
-    await kv.expire(visitorKey, 60 * 60 * 24 * 30);
+    await redisClient.expire(visitorKey, 60 * 60 * 24 * 30);
 
     // Build detailed email
     const browserInfo = `${uaResult.browser.name || "Unknown"} ${uaResult.browser.version || ""}`;
@@ -197,18 +224,21 @@ export default async (req: VercelRequest, res: VercelResponse) => {
     }
 
     // Mark this IP as visited for today (expires at midnight Cairo time)
-    await kv.set(ipDateKey, true);
+    await redisClient.set(ipDateKey, "true");
     // Calculate seconds until midnight Cairo time
     const now = new Date();
     const cairoTime = new Date(now.toLocaleString("en-US", { timeZone: "Africa/Cairo" }));
     const midnight = new Date(cairoTime);
     midnight.setHours(24, 0, 0, 0);
     const secondsUntilMidnight = Math.floor((midnight.getTime() - cairoTime.getTime()) / 1000);
-    await kv.expire(ipDateKey, secondsUntilMidnight);
+    await redisClient.expire(ipDateKey, secondsUntilMidnight);
 
     return res.status(200).json({ success: true, id: data?.id });
   } catch (error) {
     console.error("Error sending visit notification:", error);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({
+      error: "Internal server error",
+      details: error instanceof Error ? error.message : "Unknown error"
+    });
   }
 };
