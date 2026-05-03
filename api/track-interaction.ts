@@ -8,11 +8,26 @@ function getRedisClient() {
   if (!redis && process.env.REDIS_URL) {
     redis = new Redis(process.env.REDIS_URL, {
       maxRetriesPerRequest: 3,
-      enableOfflineQueue: false,
+      enableOfflineQueue: true,
       connectTimeout: 10000,
+      lazyConnect: true,
     });
   }
   return redis;
+}
+
+async function ensureRedisConnected(client: Redis): Promise<void> {
+  if (client.status === "ready") return;
+  if (client.status === "wait") {
+    await client.connect();
+  }
+  if (client.status !== "ready") {
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error("Redis connection timeout")), 10000);
+      client.once("ready", () => { clearTimeout(timeout); resolve(); });
+      client.once("error", (err) => { clearTimeout(timeout); reject(err); });
+    });
+  }
 }
 
 export default async (req: VercelRequest, res: VercelResponse) => {
@@ -40,6 +55,8 @@ export default async (req: VercelRequest, res: VercelResponse) => {
     if (!redisClient) {
       throw new Error("Failed to create Redis client");
     }
+
+    await ensureRedisConnected(redisClient);
 
     // Get visitor IP
     const ip =
